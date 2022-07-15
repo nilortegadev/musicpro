@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { createOrder } from "../Redux/Actions/OrderActions";
+import { ORDER_CREATE_RESET } from "../Redux/Constants/OrderConstants";
 import Header from "./../components/Header";
 import Message from "./../components/LoadingError/Error";
 
-const PlaceOrderScreen = () => {
+const PlaceOrderScreen = ({ history }) => {
   window.scrollTo(0, 0);
 
   const dispatch = useDispatch()
@@ -21,15 +23,35 @@ const PlaceOrderScreen = () => {
   );
 
   cart.shippingPrice = addDecimals(cart.itemsPrice > 100 ? 0 : 10);
-  cart.taxPrice = addDecimals(Number((0.08 * cart.itemsPrice).toFixed(2)));
+  cart.taxPrice = addDecimals(Number((0.04 * cart.itemsPrice).toFixed(2)));
   cart.totalPrice = (
     Number(cart.itemsPrice)+
     Number(cart.shippingPrice)+
     Number(cart.taxPrice)
   ).toFixed(2);
 
-  const placeOrderHandler = (e) => {
-    e.preventDefault();
+  const orderCreate = useSelector((state) => state.orderCreate)
+  const {order, success, error} = orderCreate
+
+  useEffect(() => {
+    if (success) {
+      history.push(`/order/${order._id}`)
+      dispatch({type: ORDER_CREATE_RESET})
+    }
+  }, [history, dispatch, success, order]);
+
+  const placeOrderHandler = () => {
+    dispatch (
+      createOrder({
+        orderItems: cart.cartItems,
+        shippingAddress: cart.shippingAddress,
+        paymentMethod: cart.paymentMethod,
+        itemsPrice: cart.itemsPrice,
+        shippingPrice: cart.shippingPrice,
+        taxPrice: cart.taxPrice,
+        totalPrice: cart.totalPrice,
+      })
+    );
   };
 
   return (
@@ -134,7 +156,7 @@ const PlaceOrderScreen = () => {
                   <td>
                     <strong>Productos</strong>
                   </td>
-                  <td>${cart.items.Price}</td>
+                  <td>${cart.itemsPrice}</td>
                 </tr>
                 <tr>
                   <td>
@@ -146,7 +168,7 @@ const PlaceOrderScreen = () => {
                   <td>
                     <strong>Impuestos</strong>
                   </td>
-                  <td>{cart.taxPrice}</td>
+                  <td>${cart.taxPrice}</td>
                 </tr>
                 <tr>
                   <td>
@@ -163,10 +185,13 @@ const PlaceOrderScreen = () => {
               </button>
               )
             }
-
-            {/* <div className="my-3 col-12">
-                <Message variant="alert-danger">{error}</Message>
-              </div> */}
+            {
+              error && (
+                <div className="my-3 col-12">
+                  <Message variant="alert-danger">{error}</Message>
+                </div> 
+              )
+            }
           </div>
         </div>
       </div>
